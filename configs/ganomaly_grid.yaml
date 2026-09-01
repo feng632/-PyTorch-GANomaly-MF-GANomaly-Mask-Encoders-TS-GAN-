@@ -1,0 +1,25 @@
+experiment:
+  name: ganomaly_grid_seed42
+  seed: 42
+
+dataset:
+  root: "E:/datasets/mvtec_ad"
+  category: grid
+  preprocessing: whole_image
+  image_size: 64
+  batch_size: 16
+  num_workers: 0
+
+model:
+  image_channels: 3
+  latent_dim: 128
+
+training:
+  epochs: 150
+  learning_rate: 0.0002
+  beta1: 0.5
+  beta2: 0.999
+  reconstruction_weight: 40.0
+  encoding_weight: 1.0
+  adversarial_weight: 1.0
+  checkpoint_every: 10

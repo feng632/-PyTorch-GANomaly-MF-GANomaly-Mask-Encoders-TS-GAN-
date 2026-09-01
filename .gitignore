@@ -1,0 +1,14 @@
+.venv/
+.uv-cache/
+.uv-python/
+.idea/
+.cache/
+.matplotlib-cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+data/raw/
+runs/
+*.pt
+*.pth

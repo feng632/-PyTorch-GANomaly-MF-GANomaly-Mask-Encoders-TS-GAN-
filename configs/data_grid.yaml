@@ -1,0 +1,7 @@
+dataset:
+  name: mvtec_ad
+  category: grid
+  root: "E:/datasets/mvtec_ad"
+  train_split: train/good
+  image_size: 64
+

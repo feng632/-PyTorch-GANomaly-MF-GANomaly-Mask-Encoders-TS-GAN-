@@ -1,0 +1,11 @@
+[project]
+name = "image-anomaly-reproduction"
+version = "0.1.0"
+description = "Reproduction of GANomaly and MF-GANomaly for image anomaly detection"
+requires-python = ">=3.11,<3.13"
+dependencies = []
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+

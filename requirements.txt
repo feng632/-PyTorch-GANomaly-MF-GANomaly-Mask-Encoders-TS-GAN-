@@ -1,0 +1,10 @@
+# PyTorch must be installed from its CUDA wheel index (see README setup notes).
+numpy
+scipy
+scikit-learn
+scikit-image
+matplotlib
+PyYAML
+tqdm
+pytest
+
