@@ -1,0 +1,30 @@
+experiment:
+  name: mf_ganomaly_grid_paper_l2_seed42
+  seed: 42
+dataset:
+  root: "E:/datasets/mvtec_ad"
+  category: grid
+  preprocessing: four_crops
+  image_size: 64
+  batch_size: 16
+  num_workers: 0
+model:
+  name: mf_ganomaly
+  image_channels: 3
+  latent_dim: 128
+  encoder_variant: paper
+training:
+  epochs: 150
+  learning_rate: 0.0002
+  beta1: 0.5
+  beta2: 0.999
+  reconstruction_weight: 40.0
+  encoding_weight: 1.0
+  adversarial_weight: 1.0
+  checkpoint_every: 10
+  # 按公式的逐样本 L2 范数计算，不等于 MSE。图中 L1 与公式冲突。
+  reconstruction_metric: l2
+evaluation:
+  alpha: 40.0
+  # 固定同时报告两种整图聚合；不根据测试集选择最佳方式。
+  aggregations: [max, mean]

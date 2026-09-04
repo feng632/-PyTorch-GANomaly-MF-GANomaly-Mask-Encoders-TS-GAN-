@@ -1,0 +1,31 @@
+experiment:
+  name: ts_gan_grid_seed42
+  seed: 42
+dataset:
+  root: "E:/datasets/mvtec_ad"
+  category: grid
+  preprocessing: four_crops
+  image_size: 64
+  anomaly_images_per_type: 2
+  batch_size: 16
+  num_workers: 0
+model:
+  name: ts_gan
+  image_channels: 3
+  latent_dim: 512
+training:
+  normal_epochs: 150
+  abnormal_epochs: 50
+  normal_learning_rate: 0.0002
+  abnormal_learning_rate: 0.0001
+  beta1: 0.5
+  beta2: 0.999
+  reconstruction_weight: 40.0
+  feature_weight: 1.0
+  adversarial_weight: 1.0
+  checkpoint_every: 10
+evaluation:
+  alpha: 40.0
+  beta: 10.0
+  eta: 0.1
+  aggregations: [max, mean]

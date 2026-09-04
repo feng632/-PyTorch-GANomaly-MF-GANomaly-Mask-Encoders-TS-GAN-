@@ -1,52 +1,56 @@
-# Image Anomaly Detection Reproduction
+# PyTorch 图像异常检测复现
 
-本项目用于逐步复现步兆军硕士论文《基于自监督与弱监督学习的图像异常检测研究》。
+本项目用于逐步复现步兆军硕士论文《基于自监督与弱监督学习的图像异常检测研究》，目前聚焦 MVTec AD `grid` 类别。
 
-## 当前状态
+## 当前进度
 
-已完成 GANomaly 在 MVTec AD `grid` 类别上的端到端基线：数据读取、网络、损失、训练、检查点、重建预览和 Image-level AUROC。正在进入 MF-GANomaly 复现阶段。
+- [x] GANomaly：训练、测试与固定四块裁剪实验已完成。
+- [x] MF-GANomaly：实现、训练与测试已完成。
+- [x] Mask Encoders：两阶段实现、训练与测试已完成。
+- [x] TS-GAN：正式训练前代码、配置和测试流程已准备好。
+- [ ] 正式训练并评估 TS-GAN。
+- [ ] 多随机种子复验、消融实验和热力图/像素级指标。
 
-我们要回答的科研问题是：
+## 当前实验结果
 
-> 在 GANomaly 中加入浅层特征误差，是否能让模型更容易发现面积较小的缺陷？
+| 模型 | 四块最大值 Image AUROC | 四块平均值 Image AUROC | 论文报告值 | 状态 |
+|---|---:|---:|---:|---|
+| GANomaly | 0.6817 | **0.7026** | 0.658 | 已训练、已测试 |
+| MF-GANomaly | **0.7703** | 0.7510 | 0.740 | 已训练、已测试 |
+| Mask Encoders | **0.9365** | 0.9056 | 0.785 | 已训练、已测试 |
+| TS-GAN | — | — | 0.806 | 待正式训练 |
 
-## 为什么先做这一部分
+Mask Encoders 本次测试的 patch 平均 PSNR 为 `24.2551`，SSIM 为 `0.7862`。论文对应报告值为 PSNR `23.631`、SSIM `0.802`。
 
-- GANomaly 是论文三个方法共同的基础。
-- MF-GANomaly 的改动相对集中，适合第一次科研复现。
-- `grid` 是规则纹理，正常与缺陷的差异较直观，便于观察热图。
+最大值和平均值是两套不同的图片级评分规则，表中同时保留，未根据测试集结果事后选择。当前结果仅来自随机种子 42，且论文部分实现细节未完全公开，因此不能把数值差异直接视为模型优劣。
 
-## 当前结果
+## 四个模型的结构示意图
 
-| 实验 | 图片级分数聚合 | Image AUROC |
-|---|---|---:|
-| 整图缩放到 64x64 | 单图编码差异 | 0.5196 |
-| 固定四块裁剪 | 四块最大值 | 0.6817 |
-| 固定四块裁剪 | 四块平均值 | **0.7026** |
-| 论文报告的 GANomaly | 论文设置 | 0.658 |
+这些图片用于直观理解数据流；严格的层数、张量形状和损失公式请以代码及各模型说明文档为准。
 
-论文未明确说明四块分数的图片级聚合方式，因此最大值和平均值均保留为复现假设。当前结果来自单个随机种子 42，不能视为最终统计结论。
+### 1. GANomaly
 
-## 已完成
+正常图像经过“编码器 → 解码器 → 再编码器”。训练时同时使用重建损失、编码损失和判别器特征损失。
 
-- [x] 建立独立 Python/CUDA 环境并验证 GPU。
-- [x] 读取 MVTec AD 正常图、异常图和像素掩码。
-- [x] 实现 Encoder、Decoder、双编码器 Generator 和 Discriminator。
-- [x] 实现重建、编码、对抗特征和判别器损失。
-- [x] 实现交替训练、检查点、CSV日志和损失曲线。
-- [x] 完成整图缩放与固定四块裁剪对照实验。
-- [x] 实现测试评分与 Image-level AUROC。
+![GANomaly 中文 3D 网络结构](reports/images/ganomaly-3d-cn.png)
 
-## TODO
+### 2. MF-GANomaly
 
-- [ ] 实现滑动窗口 PSNR 异常热图及四块热图拼接。
-- [ ] 计算 Pixel-level AUROC、PSNR 和 SSIM。
-- [ ] 使用至少 3 个随机种子重复 GANomaly 基线。
-- [ ] 增加 DCGAN 权重初始化对照实验。
-- [ ] 实现 MF-GANomaly 的浅层多尺度重建损失。
-- [ ] 实现 MF-GANomaly 多尺度异常分数与消融实验。
-- [ ] 实现 Mask Encoders 两阶段自监督训练。
-- [ ] 实现 TS-GAN 弱监督双流训练。
+在 GANomaly 基础上加入浅层特征重建误差，让模型同时关注整体结构和较细小的纹理差异。
+
+![MF-GANomaly 中文 3D 网络结构](reports/images/mf-ganomaly-3d-cn.png)
+
+### 3. Mask Encoders
+
+第一阶段用遮挡后的正常图学习补全，第二阶段再用完整正常图微调，使模型更依赖正常纹理规律，而不是仅复制输入。
+
+![Mask Encoders 中文 3D 网络结构](reports/images/mask-encoders-3d-cn.png)
+
+### 4. TS-GAN
+
+正常支路和异常支路各有一套独立生成器，并共享同一个判别器；最终结合两条支路的分数判断异常。
+
+![TS-GAN 中文 3D 网络结构](reports/images/ts-gan-3d-cn.png)
 
 ## 环境安装
 
@@ -61,9 +65,7 @@ python -m pip install -e .
 
 ## 数据准备
 
-从 MVTec AD 官方来源下载数据。本仓库不分发数据，MVTec AD 使用 CC BY-NC-SA 4.0 许可证，仅允许相应条款下的使用。
-
-预期目录：
+本仓库不上传 MVTec AD 数据集。预期目录：
 
 ```text
 <DATA_ROOT>/grid/
@@ -77,60 +79,71 @@ python -m pip install -e .
   ground_truth/<defect_type>/
 ```
 
-修改 `configs/*.yaml` 中的 `dataset.root` 指向本机数据目录。
+修改 `configs/*.yaml` 中的 `dataset.root`，使它指向本机数据目录，例如 `E:/datasets/mvtec_ad`。
 
-## 运行
+## 训练与测试
 
-检查环境和数据：
+所有命令均在项目根目录运行。也可以在 PyCharm 中直接运行对应的 `train_*.py` 或 `evaluate_*.py`。
 
-```powershell
-python -m anomaly_reproduction.check_environment
-python -m anomaly_reproduction.check_four_crops
-```
-
-训练论文描述的固定四块裁剪基线：
+### GANomaly
 
 ```powershell
 python -m anomaly_reproduction.train_four_crops
-```
-
-评估最终检查点：
-
-```powershell
 python -m anomaly_reproduction.evaluate --checkpoint runs/ganomaly_grid_four_crops_seed42/checkpoint_final.pt
 ```
 
-运行测试：
+### MF-GANomaly
 
 ```powershell
-python -m pytest -q
+python -m anomaly_reproduction.train_mf
+python -m anomaly_reproduction.evaluate_mf
 ```
 
-## 在 PyCharm 中查看数据预览
+详细说明：[MF-GANomaly 运行说明](reports/mf_ganomaly_guide.md)
 
-运行 `src/anomaly_reproduction/inspect_grid.py`。脚本会读取 U 盘中的
-`E:/datasets/mvtec_ad/grid`，并生成 `reports/grid_data_preview.png`。
+### Mask Encoders
+
+```powershell
+python -m anomaly_reproduction.train_mask
+python -m anomaly_reproduction.evaluate_mask
+```
+
+详细说明：[Mask Encoders 运行说明](reports/mask_encoders_guide.md)
+
+### TS-GAN
+
+```powershell
+python -m anomaly_reproduction.train_ts
+python -m anomaly_reproduction.evaluate_ts
+```
+
+详细说明：[TS-GAN 运行说明](reports/ts_gan_guide.md)
 
 ## 目录说明
 
 ```text
-configs/       实验参数；每次实验用什么设置都记录在这里
-data/          数据说明；大型原始数据不提交到代码仓库
-src/           模型、数据读取和训练代码
-tests/         小型自动检查，防止代码改坏
-runs/          训练日志和模型权重
-reports/       图表、结果和复现实验记录
+configs/       每个模型的实验参数
+data/          数据说明（不包含原始数据集）
+src/           数据读取、模型、损失、训练与评估代码
+tests/         已有的小型自动检查
+runs/          本机训练日志和模型权重（不会上传 GitHub）
+reports/       结构图、模型说明与复现实验记录
 ```
+
+## 后续 TODO
+
+- [ ] 正式训练和评估 TS-GAN，并检查共享判别器是否出现饱和。
+- [ ] 对四个模型统一测试协议，补充异常热力图和 Pixel-level AUROC。
+- [ ] 使用至少 3 个随机种子重复实验，报告均值与标准差。
+- [ ] 完成四块最大值/平均值聚合方式的消融实验。
+- [ ] 核对论文未明确公开的实现细节，记录所有复现假设。
+- [ ] 汇总四个模型的速度、显存占用和定量结果。
 
 ## 复现原则
 
-- 先跑通，再追求论文数值。
-- 每次只改变一个因素。
-- 不挑最好的一次结果；保留随机种子和全部实验记录。
-- 论文没有写清楚的实现细节必须标为“复现假设”。
+- 每次只改变一个因素，并保存配置和随机种子。
+- 不挑选最好的一次结果；所有评分协议都明确命名。
+- 论文没有写清楚的细节标记为“复现假设”。
+- 数据集、虚拟环境、`runs/` 和模型权重由 `.gitignore` 排除，不上传 GitHub。
 
-## 重要说明
-
-- `runs/`、模型权重、虚拟环境和数据集均被 Git 忽略。
-- 当前误差图是像素残差预览，并非论文正式的滑动窗口 PSNR 热图。
-- 本项目用于学习和科研复现，不提供医疗或工业生产结论。
+本项目用于学习和科研复现，不代表工业生产结论。

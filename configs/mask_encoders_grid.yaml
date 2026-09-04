@@ -1,0 +1,27 @@
+experiment:
+  name: mask_encoders_grid_seed42
+  seed: 42
+dataset:
+  root: "E:/datasets/mvtec_ad"
+  category: grid
+  preprocessing: four_crops
+  image_size: 128
+  mask_size: 64
+  pretrain_fraction: 0.5
+  batch_size: 16
+  num_workers: 0
+model:
+  name: mask_encoders
+  image_channels: 3
+  bottleneck_dim: 512
+training:
+  pretrain_epochs: 80
+  finetune_epochs: 80
+  learning_rate: 0.0002
+  beta1: 0.5
+  beta2: 0.999
+  reconstruction_weight: 40.0
+  adversarial_weight: 1.0
+  checkpoint_every: 10
+evaluation:
+  aggregations: [max, mean]
