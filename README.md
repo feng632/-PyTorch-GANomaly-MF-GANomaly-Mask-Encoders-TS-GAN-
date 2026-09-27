@@ -157,6 +157,16 @@ PYTHONPATH=src python3 -m anomaly_reproduction.localize_aitex_ts \
 面板采用论文描述的正常支路滑动窗口 PSNR 热力图，并同时展示原图、重建图、
 绝对残差、真实掩码和叠加结果；它用于解释跨数据集失败，而非重新挑选测试结果。
 
+完整像素级定量评价使用全部未参与校准的正常图和全部具有掩码的异常图：
+
+```bash
+PYTHONPATH=src python3 -m anomaly_reproduction.evaluate_aitex_pixel_ts \
+  --data-root /workspace/datasets/aitex/extracted
+```
+
+结果中的案例图分别存放在 `best_localization`、`worst_localization` 和
+`normal_high_response` 三个目录，避免只展示表现较好的样本。
+
 ## 目录说明
 
 ```text

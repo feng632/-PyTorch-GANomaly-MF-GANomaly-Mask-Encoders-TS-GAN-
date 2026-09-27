@@ -9,7 +9,9 @@ from collections import defaultdict
 from pathlib import Path
 
 from PIL import Image
+import torch
 from torch.utils.data import Dataset
+from torchvision import transforms
 
 from anomaly_reproduction.ts_dataset import image_transform
 
@@ -135,6 +137,109 @@ class AITEXTileDataset(Dataset):
             "path": str(sample["path"]),
             "label": sample["label"],
             "split": sample["split"],
+            "defect_code": sample["defect_code"],
+            "fabric_code": sample["fabric_code"],
+            "tile_index": sample["tile_index"],
+        }
+
+
+class AITEXPixelTileDataset(Dataset):
+    """AITEX 正式测试图块，同时返回与图块对齐的像素级真实掩码。
+
+    正常校准图不会进入本数据集。没有掩码的异常图也会被排除，因为它没有可供
+    像素评价使用的标准答案；正常测试图使用全黑掩码。
+    """
+
+    def __init__(
+        self,
+        data_root: str | Path,
+        image_size: int = 64,
+        source_tile_size: int = 256,
+        source_stride: int = 256,
+        calibration_per_fabric: int = 5,
+    ) -> None:
+        self.root = Path(data_root)
+        normal_dir = self.root / "NODefect_images"
+        defect_dir = self.root / "Defect_images"
+        self.mask_dir = self.root / "Mask_images"
+        if not normal_dir.is_dir() or not defect_dir.is_dir() or not self.mask_dir.is_dir():
+            raise FileNotFoundError(
+                "AITEX 像素评价需要 NODefect_images、Defect_images 和 Mask_images"
+            )
+
+        normal_paths = sorted(normal_dir.rglob("*.png"))
+        _, normal_test_paths = split_normal_images(normal_paths, calibration_per_fabric)
+        defect_paths = sorted(defect_dir.glob("*.png"))
+        image_records = [(path, 0, []) for path in sorted(normal_test_paths)]
+        missing_mask_paths = []
+        for path in defect_paths:
+            mask_paths = sorted(self.mask_dir.glob(f"{path.stem}_mask*.png"))
+            if mask_paths:
+                image_records.append((path, 1, mask_paths))
+            else:
+                missing_mask_paths.append(path)
+
+        self.image_transform = image_transform(image_size)
+        self.mask_transform = transforms.Compose([
+            transforms.Resize(
+                (image_size, image_size),
+                interpolation=transforms.InterpolationMode.NEAREST,
+            ),
+            transforms.ToTensor(),
+        ])
+        self.samples: list[dict] = []
+        for path, label, mask_paths in image_records:
+            with Image.open(path) as image:
+                width, height = image.size
+            boxes = [
+                (left, top, left + source_tile_size, top + source_tile_size)
+                for top in sliding_positions(height, source_tile_size, source_stride)
+                for left in sliding_positions(width, source_tile_size, source_stride)
+            ]
+            defect_code, fabric_code = parse_aitex_codes(path)
+            for tile_index, box in enumerate(boxes):
+                self.samples.append({
+                    "path": path,
+                    "label": label,
+                    "mask_paths": mask_paths,
+                    "defect_code": defect_code,
+                    "fabric_code": fabric_code,
+                    "tile_index": tile_index,
+                    "box": box,
+                })
+
+        self.image_count = len(image_records)
+        self.normal_image_count = len(normal_test_paths)
+        self.anomaly_image_count = len(image_records) - len(normal_test_paths)
+        self.missing_mask_paths = missing_mask_paths
+
+    def __len__(self) -> int:
+        return len(self.samples)
+
+    def __getitem__(self, index: int) -> dict:
+        sample = self.samples[index]
+        with Image.open(sample["path"]) as image:
+            image_tensor = self.image_transform(
+                image.convert("RGB").crop(sample["box"])
+            )
+
+        if sample["label"]:
+            union = None
+            for mask_path in sample["mask_paths"]:
+                with Image.open(mask_path) as mask:
+                    current = self.mask_transform(
+                        mask.convert("L").crop(sample["box"])
+                    )
+                union = current if union is None else torch.maximum(union, current)
+            mask_tensor = union
+        else:
+            mask_tensor = torch.zeros((1, image_tensor.shape[1], image_tensor.shape[2]))
+
+        return {
+            "image": image_tensor,
+            "mask": mask_tensor,
+            "path": str(sample["path"]),
+            "label": sample["label"],
             "defect_code": sample["defect_code"],
             "fabric_code": sample["fabric_code"],
             "tile_index": sample["tile_index"],
