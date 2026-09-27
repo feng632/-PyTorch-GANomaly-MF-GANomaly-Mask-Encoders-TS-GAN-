@@ -8,7 +8,11 @@ from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
 
-from anomaly_reproduction.dataset import FOUR_CROP_NAMES, four_crop_box
+from anomaly_reproduction.dataset import (
+    FOUR_CROP_NAMES,
+    MVTecFourCropTestDataset,
+    four_crop_box,
+)
 
 
 DEFECT_TYPES = ("bent", "broken", "glue", "metal_contamination", "thread")
@@ -80,3 +84,24 @@ class TSTestDataset(Dataset):
         return {"image": tensor, "path": str(path), "label": int(defect != "good"),
                 "defect_type": defect, "crop_index": crop_index,
                 "crop_name": FOUR_CROP_NAMES[crop_index]}
+
+
+class TSPixelTestDataset(MVTecFourCropTestDataset):
+    """TS-GAN 像素定位数据集：返回图像、掩码，并排除异常训练图。
+
+    继承通用四块测试集后，只过滤样本列表。这样图像裁剪与 Ground Truth
+    掩码始终使用完全相同的裁剪框和缩放方式，不会发生像素错位。
+    """
+
+    def __init__(self, data_root, excluded_paths, category="grid", image_size=64):
+        super().__init__(data_root, category, image_size)
+        category_root = Path(data_root) / category
+        excluded = set(excluded_paths)
+
+        self.samples = [
+            (path, crop_index)
+            for path, crop_index in self.samples
+            if path.relative_to(category_root).as_posix() not in excluded
+        ]
+        if not self.samples:
+            raise FileNotFoundError("排除异常训练图后，没有可用于像素定位的测试图片")
