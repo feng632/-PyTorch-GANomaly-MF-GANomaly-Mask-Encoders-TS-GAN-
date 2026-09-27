@@ -15,6 +15,10 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from anomaly_reproduction.aitex_dataset import AITEXPixelTileDataset
+from anomaly_reproduction.aitex_domain import (
+    AITEXManifestPixelDataset,
+    load_aitex_manifest,
+)
 from anomaly_reproduction.evaluate import denormalize
 from anomaly_reproduction.localize_aitex_ts import resize_rgb
 from anomaly_reproduction.localize_ts import normalize_heatmap, sliding_window_psnr_heatmap
@@ -37,6 +41,10 @@ def parse_args() -> argparse.Namespace:
         / "stage2_abnormal" / "checkpoint_final.pt",
     )
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--manifest", type=Path,
+        help="AITEX 域内训练使用的固定划分清单；不提供时执行 Grid 到 AITEX 外部评价",
+    )
     parser.add_argument("--source-tile-size", type=int, default=256)
     parser.add_argument("--source-stride", type=int, default=256)
     parser.add_argument("--calibration-per-fabric", type=int, default=5)
@@ -99,13 +107,32 @@ def main() -> None:
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     config = checkpoint["config"]
     model_config = config["model"]
-    dataset = AITEXPixelTileDataset(
-        args.data_root,
-        image_size=config["dataset"]["image_size"],
-        source_tile_size=args.source_tile_size,
-        source_stride=args.source_stride,
-        calibration_per_fabric=args.calibration_per_fabric,
-    )
+    dataset_config = config["dataset"]
+    manifest_path = args.manifest
+    if manifest_path is None and dataset_config.get("split_manifest"):
+        candidate = Path(dataset_config["split_manifest"])
+        manifest_path = candidate if candidate.is_absolute() else PROJECT_ROOT / candidate
+    domain_training = manifest_path is not None
+    if domain_training:
+        manifest = load_aitex_manifest(manifest_path, args.data_root)
+        split = manifest["splits"]
+        dataset = AITEXManifestPixelDataset(
+            args.data_root,
+            normal_paths=split["normal_test"],
+            anomaly_paths=split["anomaly_test"],
+            image_size=dataset_config["image_size"],
+            source_tile_size=args.source_tile_size,
+            source_stride=args.source_stride,
+        )
+    else:
+        manifest = None
+        dataset = AITEXPixelTileDataset(
+            args.data_root,
+            image_size=dataset_config["image_size"],
+            source_tile_size=args.source_tile_size,
+            source_stride=args.source_stride,
+            calibration_per_fabric=args.calibration_per_fabric,
+        )
     loader = DataLoader(
         dataset, batch_size=config["dataset"]["batch_size"], shuffle=False,
         num_workers=0, pin_memory=True,
@@ -201,9 +228,15 @@ def main() -> None:
 
     metrics = {
         "model": "ts_gan",
-        "training_dataset": "MVTec AD grid",
-        "external_dataset": "AITEX-AFID",
-        "retraining_on_aitex": False,
+        "training_dataset": (
+            "AITEX-AFID train split" if domain_training else "MVTec AD grid"
+        ),
+        "test_dataset": (
+            "AITEX-AFID held-out test split" if domain_training else "AITEX-AFID"
+        ),
+        "retraining_on_aitex": domain_training,
+        "split_seed": int(manifest["seed"]) if manifest else None,
+        "split_unit": "original image before tiling" if manifest else None,
         "normal_test_images": dataset.normal_image_count,
         "anomaly_images_with_masks": dataset.anomaly_image_count,
         "excluded_anomaly_images_without_mask": [
@@ -228,7 +261,11 @@ def main() -> None:
         "per_defect": per_defect,
     }
 
-    output_dir = args.output or args.checkpoint.parent / "external_aitex" / "pixel_localization"
+    default_parent = (
+        args.checkpoint.parent / "aitex_domain_evaluation"
+        if domain_training else args.checkpoint.parent / "external_aitex"
+    )
+    output_dir = args.output or default_parent / "pixel_localization"
     output_dir.mkdir(parents=True, exist_ok=True)
     write_csv(output_dir / "aitex_pixel_image_metrics.csv", image_rows)
     with (output_dir / "aitex_pixel_metrics.yaml").open("w", encoding="utf-8") as file:

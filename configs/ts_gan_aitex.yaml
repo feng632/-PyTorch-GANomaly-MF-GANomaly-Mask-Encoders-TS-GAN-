@@ -1,0 +1,36 @@
+experiment:
+  name: ts_gan_aitex_seed42
+  seed: 42
+dataset:
+  root: /workspace/datasets/aitex/extracted
+  split_manifest: data/aitex_split_seed42.yaml
+  preprocessing: original_image_split_then_tiles
+  image_size: 64
+  source_tile_size: 256
+  source_stride: 256
+  anomaly_tiles_per_image: 2
+  batch_size: 32
+  num_workers: 4
+model:
+  name: ts_gan
+  image_channels: 3
+  latent_dim: 512
+training:
+  normal_epochs: 150
+  abnormal_epochs: 50
+  normal_learning_rate: 0.0002
+  abnormal_learning_rate: 0.0001
+  beta1: 0.5
+  beta2: 0.999
+  reconstruction_weight: 40.0
+  feature_weight: 1.0
+  adversarial_weight: 1.0
+  checkpoint_every: 10
+evaluation:
+  alpha: 40.0
+  beta: 10.0
+  eta: 0.1
+  aggregations: [max, mean]
+  threshold_quantile: 0.99
+  pixel_window_size: 8
+  pixel_stride: 1

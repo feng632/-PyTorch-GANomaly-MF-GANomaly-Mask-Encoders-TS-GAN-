@@ -113,14 +113,14 @@
 \section*{摘要}
 \addcontentsline{toc}{section}{摘要}
 
-本文复现步兆军硕士学位论文《基于自监督与弱监督学习的图像异常检测研究》中的四种方法：GANomaly、MF-GANomaly、Mask Encoders 与 TS-GAN。实验以 MVTec AD 的 Grid 类别为对象，将原始图像固定裁为四个象限后输入网络，使用图片级 AUROC 评价异常排序能力，并同时报告四块最大值与平均值两种聚合方式。四种模型均完成训练与测试：GANomaly 的最佳 AUROC 为 0.7026，MF-GANomaly 为 0.7703，Mask Encoders 为 0.9365，TS-GAN 为 0.9534；其中 TS-GAN 使用 10 张异常图进行弱监督训练，测试时已排除这些样本。进一步按照论文描述实现整体 PSNR 与滑动窗口局部 PSNR 作差的异常热图，在窗口边长 8、步长 1 的复现设定下，TS-GAN 取得 0.9683 的额外 Pixel AUROC。结果表明，浅层特征约束、遮挡补全预训练和少量异常监督在本次 Grid 实验中均带来性能提升。但当前实验仅使用随机种子 42，且 TS-GAN 的测试集组成不同，四块聚合、滑窗参数与部分网络细节也包含复现假设，因此上述数值不能直接证明本实现优于论文。后续还需在完全未参与训练与调参的数据上进行独立验证，并补充多随机种子和失败案例分析。
+本文复现步兆军硕士学位论文《基于自监督与弱监督学习的图像异常检测研究》中的四种方法：GANomaly、MF-GANomaly、Mask Encoders 与 TS-GAN。实验以 MVTec AD 的 Grid 类别为对象，将原始图像固定裁为四个象限后输入网络，使用图片级 AUROC 评价异常排序能力，并同时报告四块最大值与平均值两种聚合方式。四种模型均完成训练与测试：GANomaly 的最佳 AUROC 为 0.7026，MF-GANomaly 为 0.7703，Mask Encoders 为 0.9365，TS-GAN 为 0.9534；其中 TS-GAN 使用 10 张异常图进行弱监督训练，测试时已排除这些样本。进一步按照论文描述实现整体 PSNR 与滑动窗口局部 PSNR 作差的异常热图，在窗口边长 8、步长 1 的复现设定下，TS-GAN 在 Grid 上取得 0.9683 的额外 Pixel AUROC。为检验跨域泛化能力，本项目还将该检查点直接用于未参与训练的 AITEX-AFID 织物缺陷数据集，不进行重训练。AITEX 图片级最大、平均聚合 AUROC 分别降至 0.4463 和 0.5482，Pixel AUROC 为 0.7472、Pixel AP 为 0.0060，表明模型仍具有一定缺陷位置排序能力，但整图判别与精确定位均受到明显域偏移影响。当前实验仅使用随机种子 42，且预处理、测试集组成与部分网络细节包含复现假设，因此结果不能直接证明本实现优于论文，后续仍需补充多随机种子与域适配实验。
 
 \noindent\textbf{关键词：}图像异常检测；GANomaly；自监督学习；弱监督学习；MVTec AD；生成对抗网络
 
 \section*{报告使用说明}
 \addcontentsline{toc}{section}{报告使用说明}
 
-本文档已根据论文、项目代码、配置文件和现有实验输出写成初稿。灰色方括号仅保留在三类尚需本人完成的内容中：封面个人信息、未参与训练数据的独立验证及案例、附录中的关键代码阅读与理解。独立验证应同时保留优秀案例与失败案例，不应只展示表现最好的样本。
+本文档已根据论文、项目代码、配置文件和现有实验输出写成初稿。灰色方括号主要保留在封面个人信息和附录中的关键代码阅读与理解部分。独立验证同时报告总体指标、分类别结果、优秀案例和失败案例，不只展示表现最好的样本。
 
 \tableofcontents
 \clearpage
@@ -172,7 +172,7 @@
 2 & MF-GANomaly 训练与评估 & 已完成 & \path{runs/mf_ganomaly_grid_paper_l2_seed42/} \\
 3 & Mask Encoders 两阶段训练与评估 & 已完成 & \path{runs/mask_encoders_grid_seed42/} \\
 4 & TS-GAN 两阶段训练与评估 & 已完成 & \path{runs/ts_gan_grid_seed42/} \\
-5 & 未参与训练数据的独立验证 & 待完成 & \fillin{由本人选择公开数据或采集新数据，并记录来源与标签} \\
+5 & AITEX-AFID 独立外部验证 & 已完成 & TS-GAN 零样本图片级与像素级评价，结果见 \path{runs/ts_gan_grid_seed42/stage2_abnormal/external_aitex/} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -210,7 +210,7 @@ PyTorch 与 CUDA & PyTorch 2.11.0+cu128，CUDA Runtime 12.8 \\
 \textbf{数据集} & \textbf{类别} & \textbf{训练正常} & \textbf{训练异常} & \textbf{测试} & \textbf{用途} \\
 \midrule
 MVTec AD & Grid & 264 & 0 或 10 & 78 或 68 & 基线复现；TS-GAN 排除用于弱监督训练的 10 张异常图 \\
-\fillin{独立验证数据集} & \fillin{类别} & \fillin{数量} & 0 & \fillin{数量} & 仅用于最终泛化验证 \\
+AITEX-AFID & 织物纹理 & 35（仅校准） & 0 & 212 & TS-GAN 零样本外部验证；不重训练 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -226,14 +226,14 @@ MVTec AD & Grid & 264 & 0 或 10 & 78 或 68 & 基线复现；TS-GAN 排除用�
 \toprule
 \textbf{项目} & \textbf{待填写内容} \\
 \midrule
-数据集名称与来源 & \fillin{公开链接、采集方式或授权信息} \\
-选择理由 & \fillin{为何能检验模型的泛化能力} \\
-正常与异常数量 & \fillin{分别填写，并按缺陷类型列出} \\
-是否与训练集重合 & \fillin{说明文件级去重或来源隔离方法} \\
-图像尺寸与设备 & \fillin{分辨率、相机、光照、拍摄距离等} \\
-标签形式 & \fillin{图片级标签、像素掩码或边界框} \\
-预处理 & \fillin{裁剪、缩放、归一化；说明是否沿用训练阶段设置} \\
-阈值来源 & \fillin{不得使用独立测试集标签反复调阈值} \\
+数据集名称与来源 & AITEX Fabric Image Database（AFID），来自 AITEX 官方公开页面 \\
+选择理由 & 与 MVTec Grid 同属规则纹理缺陷，但布料材质、纹理周期、图像尺度和采集域均不同，可检验跨数据集泛化能力 \\
+正常与异常数量 & 正常图 141 张，其中 35 张仅用于阈值校准、106 张用于测试；异常图 106 张。像素评价排除缺少掩码的 \texttt{0100\_025\_08.png}，使用 105 张异常图 \\
+是否与训练集重合 & 数据来源与 MVTec AD 完全独立，未用于模型训练、模型选择或参数调整 \\
+图像尺寸与设备 & 本实验将原始长条织物图像切为不重叠的 $256\times256$ 图块，再缩放为模型输入的 $64\times64$；采集设备参数未纳入本次实验记录 \\
+标签形式 & 正常/异常图片级标签；105 张异常图具有像素级二值掩码，两个多掩码样本先取掩码并集 \\
+预处理 & 图块缩放为 $64\times64$、转三通道并归一化到 $[-1,1]$；像素热图拼回原图后逐图归一化到 $[0,1]$ \\
+阈值来源 & 每种织物各取 5 张正常图，共 35 张；仅根据其分数的 0.99 分位数确定阈值，未使用异常测试标签调阈值 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -756,102 +756,93 @@ TS-GAN & 68 & \textbf{0.9534} & 0.9240 & 0.806 \\
 
 \begin{table}[H]
 \centering
-\caption{独立验证集总体结果}
+\caption{TS-GAN 在 AITEX-AFID 上的零样本图片级结果}
 \small
-\begin{tabularx}{\linewidth}{L{2.3cm}C{1.8cm}C{1.5cm}C{1.7cm}C{1.7cm}C{1.8cm}}
+\begin{tabularx}{\linewidth}{L{2.2cm}C{1.7cm}C{1.6cm}C{1.6cm}C{1.6cm}C{1.6cm}Y}
 \toprule
-\textbf{模型} & \textbf{AUROC} & \textbf{F1} & \textbf{精确率} & \textbf{召回率} & \textbf{阈值来源} \\
+\textbf{汇总方式} & \textbf{AUROC} & \textbf{AP} & \textbf{准确率} & \textbf{F1} & \textbf{召回率} & \textbf{阈值} \\
 \midrule
-GANomaly & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{来源} \\
-MF-GANomaly & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{来源} \\
-Mask Encoders & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{来源} \\
-TS-GAN & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{来源} \\
+图块最大值 & 0.4463 & 0.4856 & 0.4953 & 0.0531 & 0.0283 & 2361.30 \\
+图块平均值 & \textbf{0.5482} & \textbf{0.5392} & 0.5000 & 0.0536 & 0.0283 & 882.15 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+\noindent 两种阈值均只由 35 张正常校准图的 0.99 分位数得到。最大值汇总的混淆矩阵为 TN=102、FP=4、FN=103、TP=3，平均值汇总为 TN=103、FP=3、FN=103、TP=3。虽然误报较少，但原因是阈值较高，代价是 106 张异常图中仅检出 3 张；因此约 0.50 的准确率不能解释为模型效果良好。与 Grid 上 0.9534（最大汇总）和 0.9240（平均汇总）的图片级 AUROC 相比，AITEX 分别下降 0.5071 和 0.3758，说明整图异常分数没有成功迁移到新的织物域。
+
 \begin{table}[H]
 \centering
-\caption{独立验证集按缺陷类型结果}
-\begin{tabularx}{\linewidth}{L{2.8cm}C{1.8cm}C{1.8cm}C{1.8cm}Y}
+\caption{AITEX-AFID 像素级总体结果}
+\begin{tabularx}{0.88\linewidth}{Y C{2.8cm} C{2.8cm}}
 \toprule
-\textbf{缺陷类型} & \textbf{样本数} & \textbf{AUROC 或召回率} & \textbf{平均分数} & \textbf{观察} \\
+\textbf{评估范围} & \textbf{Pixel AUROC} & \textbf{Pixel AP} \\
 \midrule
-\fillin{缺陷一} & \fillin{数量} & \fillin{值} & \fillin{值} & \fillin{容易或困难的原因} \\
-\fillin{缺陷二} & \fillin{数量} & \fillin{值} & \fillin{值} & \fillin{容易或困难的原因} \\
-\fillin{正常样本} & \fillin{数量} & \fillin{特异度} & \fillin{值} & \fillin{误报情况} \\
+全部 211 张有像素评价资格的图像 & \textbf{0.7472} & 0.0060 \\
+仅 105 张有掩码的异常图像 & 0.7475 & 0.0114 \\
 \bottomrule
 \end{tabularx}
 \end{table}
+
+\noindent Pixel AUROC 表示随机抽取一个异常像素和一个正常像素时，热图把异常像素排在更高位置的概率。AITEX 的 0.7472 比 Grid 的 0.9683 下降 0.2211，说明定位排序能力仍部分保留，但跨域后明显退化。Pixel AP 对稀少的异常像素更敏感；0.0060 表明热图虽然常在缺陷附近产生较高响应，却同时覆盖大量正常区域，精确定位能力较弱。Grid 实验未计算 Pixel AP，因此不能对该指标作直接数值比较。
+
+\begin{table}[H]
+\centering
+\caption{AITEX-AFID 按缺陷类型的像素级结果}
+\small
+\begin{tabularx}{\linewidth}{C{1.2cm}L{3.2cm}C{1.2cm}C{2.2cm}C{2.2cm}}
+\toprule
+\textbf{代码} & \textbf{官方缺陷名称（中文释义）} & \textbf{图像数} & \textbf{Pixel AUROC} & \textbf{Pixel AP} \\
+\midrule
+002 & Broken end（断经） & 9 & 0.8170 & 0.005645 \\
+006 & Broken yarn（断纱） & 8 & 0.8588 & 0.008655 \\
+010 & Broken pick（断纬） & 10 & 0.6329 & 0.029709 \\
+016 & Weft curling（纬纱卷曲） & 3 & 0.8887 & 0.007636 \\
+019 & Fuzzyball（毛球） & 39 & 0.6773 & 0.000050 \\
+022 & Cut selvage（切边缺陷） & 9 & 0.5851 & 0.000470 \\
+023 & Crease（折痕） & 5 & 0.7563 & 0.002407 \\
+025 & Warp ball（经纱结团） & 5 & 0.6641 & 0.000046 \\
+027 & Knots（结头） & 1 & 0.8855 & 0.001299 \\
+029 & Contamination（污染） & 1 & 0.7145 & 0.000497 \\
+030 & Nep（棉结/纤维结粒） & 14 & 0.7753 & 0.000597 \\
+036 & Weft crack（纬向裂缝） & 1 & 0.8235 & 0.468473 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent 其中 002、030 等数字是 AITEX 文件名中的官方缺陷类型代码，不是模型分数。036 仅有 1 张图，其较高 AP 不具有稳定的类别统计意义；027、029 同样只有 1 张图，不能据此判断模型对这些缺陷具有稳定优势。
 
 \subsection{表现较好的案例}
 
-\figslot[6cm]{插入优秀案例一：原图、真值标注、重建图、异常热力图}
-
-\begin{table}[H]
+\begin{figure}[H]
 \centering
-\caption{优秀案例一记录}
-\begin{tabularx}{\linewidth}{L{3.0cm}Y}
-\toprule
-\textbf{项目} & \textbf{内容} \\
-\midrule
-数据集与样本编号 & \fillin{数据集、类别、文件名或唯一编号} \\
-真实标签与模型判断 & \fillin{正常或异常、预测结果、异常分数、阈值} \\
-为什么表现好 & \fillin{缺陷大小、位置、纹理差异和热力图是否集中} \\
-模型间差异 & \fillin{四个模型中哪些判断正确，分数差多少} \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\figslot[6cm]{插入优秀案例二：原图、真值标注、重建图、异常热力图}
-
-\noindent\fillin{按案例一的字段记录案例二，必要时增加更多案例。优秀案例应覆盖不同缺陷，而不是只选同一种容易样本。}
+\includegraphics[width=\linewidth]{images/aitex-best-nep-0086.png}
+\caption{AITEX 棉结缺陷 \texttt{0086\_030\_02} 的较好定位案例，单图 Pixel AUROC 为 0.9866。热图高响应覆盖真实缺陷附近，说明 Grid 上学习到的局部重建差异对部分跨域缺陷仍然有效；但 Pixel AP 仅为 0.0039，提示响应范围仍远大于真实掩码。}
+\label{fig:aitex-best}
+\end{figure}
 
 \subsection{表现不理想的案例}
 
 \subsubsection{误报案例}
 
-\figslot[6cm]{插入误报案例：正常原图、重建图、异常热力图}
-
-\begin{table}[H]
+\begin{figure}[H]
 \centering
-\caption{误报案例记录}
-\begin{tabularx}{\linewidth}{L{3.0cm}Y}
-\toprule
-\textbf{项目} & \textbf{内容} \\
-\midrule
-样本编号 & \fillin{数据集、类别和文件名} \\
-真实标签与模型判断 & 正常；\fillin{预测异常分数、阈值和模型} \\
-可能原因 & \fillin{光照、边缘裁剪、背景变化、纹理周期变化或域偏移} \\
-证据 & \fillin{指出热力图高响应位置，并与重建误差对应} \\
-改进方案 & \fillin{预处理、训练数据、损失、阈值或模型结构方面的改进} \\
-\bottomrule
-\end{tabularx}
-\end{table}
+\includegraphics[width=\linewidth]{images/aitex-normal-high-response-0008.png}
+\caption{AITEX 正常样本 \texttt{0008\_000\_00} 的高响应案例。真实掩码为空，但热图仍在正常纹理区域产生明显响应，说明材质变化和周期纹理的重建误差会被误当作缺陷证据。}
+\label{fig:aitex-fp}
+\end{figure}
 
 \subsubsection{漏报案例}
 
-\figslot[6cm]{插入漏报案例：异常原图、真值标注、重建图、异常热力图}
-
-\begin{table}[H]
+\begin{figure}[H]
 \centering
-\caption{漏报案例记录}
-\begin{tabularx}{\linewidth}{L{3.0cm}Y}
-\toprule
-\textbf{项目} & \textbf{内容} \\
-\midrule
-样本编号 & \fillin{数据集、缺陷类别和文件名} \\
-真实标签与模型判断 & 异常；\fillin{预测异常分数、阈值和模型} \\
-可能原因 & \fillin{缺陷过小、生成器复制异常、分辨率不足或聚合方式稀释异常} \\
-证据 & \fillin{指出重建图和热力图为何没有突出缺陷} \\
-改进方案 & \fillin{更高分辨率、滑动窗口、浅层特征或多尺度策略} \\
-\bottomrule
-\end{tabularx}
-\end{table}
+\includegraphics[width=\linewidth]{images/aitex-worst-cut-selvage-0104.png}
+\caption{AITEX 切边缺陷 \texttt{0104\_022\_03} 的较差定位案例，单图 Pixel AUROC 仅为 0.1128。热图主要响应正常纹理而非真实缺陷，反映 $64\times64$ 输入分辨率、材质域偏移及单尺度窗口共同造成的定位失败。}
+\label{fig:aitex-fn}
+\end{figure}
 
 \subsection{测试结果小结}
 
-\fillin{待本人完成独立验证后填写：先回答独立数据是否支持现有趋势，再结合总体指标、分类别统计、优秀案例和失败案例给出证据。}
+AITEX 独立验证不支持“Grid 上的高性能可以直接推广到其他织物数据”的结论。图片级平均汇总 AUROC 仅为 0.5482，且在正常校准阈值下只检出 3/106 张异常图，说明异常分数的尺度和排序均发生明显变化。像素级 Pixel AUROC 为 0.7472，表明局部 PSNR 热图仍保留部分位置排序能力；然而 Pixel AP 只有 0.0060，结合正常高响应与切边缺陷漏定位案例可知，热图存在大面积非缺陷响应。后续改进应优先考虑目标域正常样本适配、更高输入分辨率、多尺度窗口及基于正常目标域数据的热图校准，而不能使用 AITEX 异常测试标签反复选择参数。
 
 \section{结果讨论}
 
@@ -879,14 +870,14 @@ TS-GAN & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{来
   \item \textbf{GANomaly：}结构和评分逻辑清晰，适合作为只用正常数据的基线；但仅以潜变量差异评分，可能忽略局部重建异常，对细小纹理缺陷较弱。
   \item \textbf{MF-GANomaly：}在基线中加入像素和浅层特征，使局部纹理变化更容易进入损失与评分；代价是损失量级、取层和权重更敏感，并增加特征计算。
   \item \textbf{Mask Encoders：}遮挡补全减少了直接复制输入的可能，本轮重建质量和 AUROC 均较好；但需要两阶段训练，中心遮挡任务与真实缺陷位置不完全一致，仍可能在边界或细小缺陷上失败。
-  \item \textbf{TS-GAN：}少量异常样本使模型显式学习异常方向，本轮 AUROC 最高；但结果依赖异常样本是否具有代表性，共享判别器在两阶段可能遗忘或饱和，且其测试集与无监督模型不同。
+  \item \textbf{TS-GAN：}少量异常样本使模型显式学习异常方向，本轮 Grid AUROC 最高；但结果依赖异常样本是否具有代表性，共享判别器在两阶段可能遗忘或饱和，且其测试集与无监督模型不同。AITEX 零样本结果进一步说明，这种优势并不会自动转化为跨数据域泛化能力。
 \end{itemize}
 
 \subsection{实验有效性威胁}
 
 \begin{enumerate}
   \item \textbf{内部有效性：}当前同时报告最大与平均聚合，没有据测试结果删去较差方案；TS-GAN 的 10 张异常训练图已从测试中排除。但此前开发过程查看过测试 AUROC，因此后续独立数据才适合作为最终泛化证据。
-  \item \textbf{外部有效性：}现有结论只来自 MVTec AD 的 Grid 类别，不能直接推广到其他纹理、物体类别、相机或光照条件。
+  \item \textbf{外部有效性：}AITEX-AFID 验证扩展到了独立织物域，但目前只验证 TS-GAN，且未覆盖其他物体类别、相机和光照条件；因此仍不能将结论推广到一般工业异常检测。
   \item \textbf{统计有效性：}每个模型仅运行种子 42，缺少均值、标准差、置信区间及显著性检验，偶然初始化可能影响排序。
   \item \textbf{实现有效性：}论文未公开完整源码，本项目对多尺度取层、判别器分类头、异常训练图和图片聚合做了可复现假设，这些差异会影响与论文数值的严格比较。
 \end{enumerate}
@@ -899,6 +890,7 @@ TS-GAN & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{来
   \item 四个模型已完成从数据读取、训练、检查点保存到图片级评估的完整流程；在 Grid、固定四块裁剪和种子 42 下，三个改进模型的 AUROC 均高于 GANomaly 基线。
   \item MF-GANomaly 的最佳 AUROC 为 0.7703，Mask Encoders 为 0.9365；与 GANomaly 的 0.7026 相比，结果支持浅层特征约束与遮挡补全在本实验协议下有效。
   \item TS-GAN 的最佳图片级 AUROC 为 0.9534，但它使用 10 张异常训练图且测试样本数为 68，不能与其余模型作完全公平的直接排名。按论文描述实现滑窗 PSNR 热图后，额外 Pixel AUROC 为 0.9683，说明该方法在当前 Grid 测试集上具有较好的像素排序能力；该数值不是论文报告值，且窗口参数仍属于复现假设。
+  \item 在完全未重训练的 AITEX-AFID 外部验证中，TS-GAN 图片级最大、平均汇总 AUROC 分别为 0.4463 和 0.5482，Pixel AUROC 为 0.7472、Pixel AP 为 0.0060。与 Grid 结果的明显落差证明当前模型存在较强域依赖：局部定位排序能力部分保留，但整图异常识别和精确像素定位不能直接迁移。
 \end{enumerate}
 
 \subsection{后续工作}
@@ -906,9 +898,9 @@ TS-GAN & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{来
 \begin{itemize}
   \item 使用至少 3 个随机种子，报告均值和标准差。
   \item 固定统一测试集和预处理，对四个模型公平比较。
-  \item 在独立数据集上验证图片级识别与像素级定位的跨域泛化能力。
+  \item 在 AITEX 正常训练子集上进行不使用异常标签的目标域适配，并与本报告的零样本结果严格区分。
   \item 对滑动窗口大小、步长和重叠响应汇总方式进行敏感性实验。
-  \item \fillin{待独立验证完成后，根据误报和漏报案例提出针对性实验。}
+  \item 针对 AITEX 的正常高响应和细小缺陷漏定位，比较更高输入分辨率、多尺度窗口及正常域热图校准方法。
 \end{itemize}
 
 \clearpage
@@ -919,7 +911,7 @@ TS-GAN & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{值} & \fillin{来
   \item 步兆军. 基于自监督与弱监督学习的图像异常检测研究[D]. 南京：东南大学，2022.
   \item Akcay S, Atapour-Abarghouei A, Breckon T P. GANomaly: Semi-supervised anomaly detection via adversarial training[C]//Asian Conference on Computer Vision. Cham: Springer, 2018: 622--637.
   \item Bergmann P, Fauser M, Sattlegger D, et al. MVTec AD: A comprehensive real-world dataset for unsupervised anomaly detection[C]//Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. 2019: 9592--9600.
-  \item \fillin{独立验证数据集的论文或官方网站。}
+  \item Silvestre-Blanes J, Albero-Albero T, Miralles I, et al. AFID: A public fabric image database for defect detection[J]. AUTEX Research Journal, 2019. 数据集官网：\url{https://www.aitex.es/afid/}.
 \end{enumerate}
 
 \appendix

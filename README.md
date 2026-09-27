@@ -9,6 +9,7 @@
 - [x] Mask Encoders：两阶段实现、训练与测试已完成。
 - [x] TS-GAN：实现、训练与测试已完成。
 - [x] TS-GAN 像素级热力图与 Pixel-level AUROC 代码已完成。
+- [x] TS-GAN 的 AITEX 零样本外部验证与域内训练流程已实现。
 - [ ] 其余三个模型的像素定位、多随机种子复验和消融实验。
 
 ## 当前实验结果
@@ -166,6 +167,49 @@ PYTHONPATH=src python3 -m anomaly_reproduction.evaluate_aitex_pixel_ts \
 
 结果中的案例图分别存放在 `best_localization`、`worst_localization` 和
 `normal_high_response` 三个目录，避免只展示表现较好的样本。
+
+### AITEX 域内训练与独立测试
+
+该实验和上面的 Grid→AITEX 零样本实验必须分开报告。划分以原始长图为单位，
+先固定训练、正常验证和测试清单，再切图块，杜绝同一原图的图块跨集合。正常验证
+集只用于确定阈值；异常测试标签不参与阈值选择。异常支路每个样本量足够的缺陷
+类型固定抽取 1 张训练图，只有 1 张图的稀有缺陷全部留作未见类型测试。
+
+先生成并检查划分清单：
+
+```bash
+PYTHONPATH=src python3 -m anomaly_reproduction.prepare_aitex_split \
+  --data-root /workspace/datasets/aitex/extracted
+```
+
+然后训练两阶段 TS-GAN：
+
+```bash
+PYTHONPATH=src python3 -m anomaly_reproduction.train_ts_aitex \
+  --config configs/ts_gan_aitex.yaml
+```
+
+异常训练原图是弱图片级标签。阶段一结束后，程序用正常生成器的重建 MAE 为每张
+异常训练图的图块排序，只取最高的 2 块训练异常生成器，不读取像素掩码，因此没有
+把像素级测试答案泄漏进训练。选择记录保存在
+`runs/ts_gan_aitex_seed42/selected_anomaly_tiles.yaml`。
+
+训练完成后依次运行图片级与像素级评价：
+
+```bash
+PYTHONPATH=src python3 -m anomaly_reproduction.evaluate_ts_aitex_domain \
+  --data-root /workspace/datasets/aitex/extracted
+
+PYTHONPATH=src python3 -m anomaly_reproduction.evaluate_aitex_pixel_ts \
+  --data-root /workspace/datasets/aitex/extracted \
+  --checkpoint runs/ts_gan_aitex_seed42/stage2_abnormal/checkpoint_final.pt \
+  --manifest data/aitex_split_seed42.yaml
+```
+
+图片级结果写入 `aitex_domain_evaluation/metrics.yaml`，同时按缺陷代码报告相对全部
+正常测试图的 AUROC 和固定阈值召回率；像素级结果写入其
+`pixel_localization/` 子目录。最终应将这些结果与 Grid→AITEX 零样本结果对照，
+而不是覆盖原来的外部验证结果。
 
 ## 目录说明
 
