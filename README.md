@@ -132,6 +132,21 @@ python -m anomaly_reproduction.localize_ts
 论文没有设置像素二值化阈值，也没有报告 Pixel AUROC；项目额外计算 Pixel AUROC
 只用于分析，不将其冒充为论文结果。
 
+### AITEX 跨数据集直接验证
+
+`evaluate_aitex_ts` 直接加载在 MVTec AD Grid 上训练完成的 TS-GAN，不使用
+AITEX 重新训练。AITEX 长条图先切成 256×256 正方形图块，再缩放为模型需要的
+64×64；每种织物固定取 5 张正常图作为无异常阈值校准集，其余正常图和全部缺陷图
+才参与正式评价，避免使用测试异常标签选择阈值。
+
+```bash
+PYTHONPATH=src python3 -m anomaly_reproduction.evaluate_aitex_ts \
+  --data-root /workspace/datasets/aitex/extracted
+```
+
+结果保存在 `runs/ts_gan_grid_seed42/stage2_abnormal/external_aitex/`，包括图块分数、
+整图分数，以及最大值/平均值聚合下的 AUROC、AP、准确率、精确率、召回率和 F1。
+
 ## 目录说明
 
 ```text
