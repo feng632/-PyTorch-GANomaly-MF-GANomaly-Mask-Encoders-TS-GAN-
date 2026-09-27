@@ -147,6 +147,16 @@ PYTHONPATH=src python3 -m anomaly_reproduction.evaluate_aitex_ts \
 结果保存在 `runs/ts_gan_grid_seed42/stage2_abnormal/external_aitex/`，包括图块分数、
 整图分数，以及最大值/平均值聚合下的 AUROC、AP、准确率、精确率、召回率和 F1。
 
+完成定量评价后，可生成漏检异常图和误报正常图的独立热力图面板：
+
+```bash
+PYTHONPATH=src python3 -m anomaly_reproduction.localize_aitex_ts \
+  --data-root /workspace/datasets/aitex/extracted
+```
+
+面板采用论文描述的正常支路滑动窗口 PSNR 热力图，并同时展示原图、重建图、
+绝对残差、真实掩码和叠加结果；它用于解释跨数据集失败，而非重新挑选测试结果。
+
 ## 目录说明
 
 ```text
