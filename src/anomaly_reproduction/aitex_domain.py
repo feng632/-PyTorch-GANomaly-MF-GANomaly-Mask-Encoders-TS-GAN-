@@ -272,6 +272,9 @@ class AITEXManifestPixelDataset(AITEXManifestTileDataset):
             root, combined, label=0, split_name="test", image_size=image_size,
             source_tile_size=source_tile_size, source_stride=source_stride,
         )
+        # 像素定位评估器在生成案例图时使用 image_transform；保留该别名，
+        # 与旧版 AITEXPixelDataset 的公开接口一致。
+        self.image_transform = self.transform
         anomaly_set = set(usable_anomalies)
         for sample in self.samples:
             sample["label"] = int(sample["relative_path"] in anomaly_set)

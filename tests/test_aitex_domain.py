@@ -82,3 +82,4 @@ def test_tile_and_pixel_datasets_follow_manifest(tmp_path):
     assert [path.name for path in pixels.missing_mask_paths] == ["0100_036_01.png"]
     assert len(pixels) == 8
     assert pixels[0]["mask"].shape == (1, 64, 64)
+    assert pixels.image_transform(Image.new("RGB", (256, 256))).shape == (3, 64, 64)
