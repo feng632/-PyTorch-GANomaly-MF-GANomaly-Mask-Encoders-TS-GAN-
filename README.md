@@ -8,7 +8,8 @@
 - [x] MF-GANomaly：实现、训练与测试已完成。
 - [x] Mask Encoders：两阶段实现、训练与测试已完成。
 - [x] TS-GAN：实现、训练与测试已完成。
-- [ ] 多随机种子复验、消融实验和热力图/像素级指标。
+- [x] TS-GAN 像素级热力图与 Pixel-level AUROC 代码已完成。
+- [ ] 其余三个模型的像素定位、多随机种子复验和消融实验。
 
 ## 当前实验结果
 
@@ -116,9 +117,20 @@ python -m anomaly_reproduction.evaluate_mask
 ```powershell
 python -m anomaly_reproduction.train_ts
 python -m anomaly_reproduction.evaluate_ts
+python -m anomaly_reproduction.localize_ts
 ```
 
 详细说明：[TS-GAN 运行说明](reports/ts_gan_guide.md)
+
+`localize_ts` 不重新训练模型。它读取异常阶段最终检查点，排除异常支路见过的
+10 张训练图片，使用正常支路重建图，并按照论文描述计算“整体 PSNR 与滑动窗口
+局部 PSNR 的差值”，最后将四个裁剪块重新拼接。论文没有公开窗口大小、步长和
+重叠窗口汇总方式；当前明确采用窗口 8、步长 1、重叠响应逐像素取平均，可以通过
+`--window-size` 和 `--stride` 调整。结果会在
+`runs/ts_gan_grid_seed42/stage2_abnormal/pixel_localization_checkpoint_final/`
+保存真值掩码、原图、正常支路重建图、连续 PSNR 热力图及叠加图。
+论文没有设置像素二值化阈值，也没有报告 Pixel AUROC；项目额外计算 Pixel AUROC
+只用于分析，不将其冒充为论文结果。
 
 ## 目录说明
 
@@ -127,7 +139,7 @@ configs/       每个模型的实验参数
 data/          数据说明（不包含原始数据集）
 src/           数据读取、模型、损失、训练与评估代码
 tests/         已有的小型自动检查
-runs/          本机训练日志和模型权重（不会上传 GitHub）
+runs/          四个正式实验、归档实验、缓存、日志和模型权重（不会上传 GitHub）
 reports/       结构图、模型说明与复现实验记录
 ```
 
