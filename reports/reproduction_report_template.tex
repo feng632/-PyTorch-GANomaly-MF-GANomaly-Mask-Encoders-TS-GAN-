@@ -739,17 +739,47 @@ TS-GAN & 68 & \textbf{0.9534} & 0.9240 & 0.806 \\
 
 \noindent\textbf{指标说明：}论文没有报告上述 Pixel AUROC，0.9683 是本项目在明确滑窗参数下增加的评价结果，不能写成论文复现值。它表示随机抽取一个真实异常像素和一个正常像素时，连续热图把异常像素排在更高位置的概率约为 96.83\%，并不表示 96.83\% 的像素都被正确分类。
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\linewidth]{images/ts-gan-psnr-best-broken-002.png}
-\caption{TS-GAN 在断裂样本上的滑窗 PSNR 热图示例。两个真实缺陷位置均出现集中高响应，但裁剪边界和少量正常纹理仍存在响应。}
-\label{fig:tsgan-psnr-best}
-\end{figure}
+\subsubsection{定位较好的代表样例}
 
 \begin{figure}[H]
 \centering
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/ts-gan-psnr-best-broken-002.png}
+\caption{断裂（Broken）样本 \texttt{002}，单图 Pixel AUROC 为 0.9985。}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/ts-gan-psnr-best-metal-000.png}
+\caption{金属杂质（Metal contamination）样本 \texttt{000}，单图 Pixel AUROC 为 0.9995。}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/ts-gan-psnr-best-glue-007.png}
+\caption{胶水附着（Glue）样本 \texttt{007}，单图 Pixel AUROC 为 0.9991。}
+\end{subfigure}
+\caption{TS-GAN 在 Grid 上定位较好的三个案例。三者热图峰值均覆盖真实掩码区域，说明窗口 PSNR 对明显的局部结构破坏具有稳定响应；但拼接边界和周围纹理仍有较弱伪响应。}
+\label{fig:tsgan-psnr-best}
+\end{figure}
+
+\subsubsection{定位较差的代表样例}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{\linewidth}
 \includegraphics[width=\linewidth]{images/ts-gan-psnr-worst-glue-001.png}
-\caption{TS-GAN 在胶水附着样本上的较差案例。该图单图 Pixel AUROC 为 0.6628，说明小尺寸、低对比度缺陷仍可能被纹理重建误差掩盖。}
+\caption{胶水附着样本 \texttt{001}，单图 Pixel AUROC 为 0.6628。}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/ts-gan-psnr-worst-thread-003.png}
+\caption{毛线缠绕（Thread）样本 \texttt{003}，单图 Pixel AUROC 为 0.8874。}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/ts-gan-psnr-worst-thread-004.png}
+\caption{毛线缠绕样本 \texttt{004}，单图 Pixel AUROC 为 0.9502。}
+\end{subfigure}
+\caption{TS-GAN 在 Grid 测试集中相对较差的三个案例。胶水样本中的小尺寸、低对比度缺陷最容易被纹理重建误差掩盖；毛线样本虽仍有较高总体排序，但热响应范围比真实细线更宽。这里的“较差”是相对于本组 Grid 测试图，而不等同于完全定位失败。}
 \label{fig:tsgan-psnr-worst}
 \end{figure}
 
@@ -828,8 +858,21 @@ AITEX 共使用 35 张正常图作为阈值校准集，另以 106 张正常图�
 
 \begin{figure}[H]
 \centering
+\begin{subfigure}{\linewidth}
 \includegraphics[width=\linewidth]{images/aitex-best-nep-0086.png}
-\caption{AITEX 棉结缺陷 \texttt{0086\_030\_02} 的较好定位案例，单图 Pixel AUROC 为 0.9866。热图高响应覆盖真实缺陷附近，说明 Grid 上学习到的局部重建差异对部分跨域缺陷仍然有效；但 Pixel AP 仅为 0.0039，提示响应范围仍远大于真实掩码。}
+\caption{棉结 \texttt{0086\_030\_02}：Pixel AUROC 0.9866，Pixel AP 0.0039。}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/aitex-best-defect-0006.png}
+\caption{断经 \texttt{0006\_002\_01}：Pixel AUROC 0.9842，Pixel AP 0.0089。}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/aitex-best-fuzzyball-0041.png}
+\caption{毛球 \texttt{0041\_019\_02}：Pixel AUROC 0.9819，Pixel AP 0.00084。}
+\end{subfigure}
+\caption{AITEX 零样本定位中排序较好的三个案例。热图峰值都接近真实缺陷，说明 Grid 学到的局部重建差异可以迁移到部分织物缺陷；但三个案例的 Pixel AP 均很低，表明高响应面积远大于细小掩码，不能仅凭“峰值位置正确”宣称分割准确。}
 \label{fig:aitex-best}
 \end{figure}
 
@@ -839,18 +882,66 @@ AITEX 共使用 35 张正常图作为阈值校准集，另以 106 张正常图�
 
 \begin{figure}[H]
 \centering
+\begin{subfigure}{\linewidth}
 \includegraphics[width=\linewidth]{images/aitex-normal-high-response-0008.png}
-\caption{AITEX 正常样本 \texttt{0008\_000\_00} 的高响应案例。真实掩码为空，但热图仍在正常纹理区域产生明显响应，说明材质变化和周期纹理的重建误差会被误当作缺陷证据。}
+\caption{正常样本 \texttt{0008\_000\_00}。}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/aitex-normal-high-response-0010.png}
+\caption{正常样本 \texttt{0010\_000\_00}。}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/aitex-normal-high-response-0007.png}
+\caption{正常样本 \texttt{0007\_000\_00}。}
+\end{subfigure}
+\caption{AITEX 正常图中的三个高响应案例。它们都没有真实缺陷，但周期纹理、亮度带或边缘仍产生明显热响应，说明 Grid 与 AITEX 的材质差异会被重建器误当作异常证据；这类响应会显著降低 Pixel AP。}
 \label{fig:aitex-fp}
 \end{figure}
 
-\subsubsection{漏报案例}
+\subsubsection{像素定位失败案例}
 
 \begin{figure}[H]
 \centering
+\begin{subfigure}{\linewidth}
 \includegraphics[width=\linewidth]{images/aitex-worst-cut-selvage-0104.png}
-\caption{AITEX 切边缺陷 \texttt{0104\_022\_03} 的较差定位案例，单图 Pixel AUROC 仅为 0.1128。热图主要响应正常纹理而非真实缺陷，反映 $64\times64$ 输入分辨率、材质域偏移及单尺度窗口共同造成的定位失败。}
+\caption{切边缺陷 \texttt{0104\_022\_03}：Pixel AUROC 0.1128，Pixel AP 0.00021。}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/aitex-worst-fuzzyball-0059.png}
+\caption{毛球 \texttt{0059\_019\_01}：Pixel AUROC 0.1197，Pixel AP $1.53\times10^{-5}$。}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/aitex-worst-hole-0078.png}
+\caption{经纱结团 \texttt{0078\_025\_03}：Pixel AUROC 0.1286，Pixel AP $1.53\times10^{-5}$。}
+\end{subfigure}
+\caption{AITEX 零样本像素定位最差的三个代表案例。热图主要响应正常织物边界或纹理带，而真实缺陷区域响应很弱，反映 $64\times64$ 输入分辨率、材质域偏移、细小缺陷占比和单尺度窗口共同造成的定位失败。}
 \label{fig:aitex-fn}
+\end{figure}
+
+\subsubsection{图片级漏报案例}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/aitex-fn-0066.png}
+\caption{折痕 \texttt{0066\_023\_01}：最大分数 2210.22、平均分数 378.46，均低于正常校准阈值。}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/aitex-fn-0083.png}
+\caption{污染 \texttt{0083\_029\_04}：最大分数 588.95、平均分数 386.95，均被判为正常。}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}{\linewidth}
+\includegraphics[width=\linewidth]{images/aitex-fn-0084.png}
+\caption{棉结 \texttt{0084\_030\_04}：最大分数 829.19、平均分数 387.94，均被判为正常。}
+\end{subfigure}
+\caption{AITEX 图片级漏报案例。最大值阈值为 2361.30，平均值阈值为 882.15，三张异常图在两种聚合方式下都未越过阈值。这说明零样本失败不仅是热图位置不准，还包括异常分数整体尺度低于由正常校准集确定的判定边界。}
+\label{fig:aitex-image-fn}
 \end{figure}
 
 \subsection{零样本测试结果小结}
@@ -1041,6 +1132,7 @@ AITEX 已经参与重新训练，但图片级最大聚合 AUROC 为 0.8173，仍
   \item \textbf{滑动窗口敏感性：}比较窗口边长 4、8、16，步长 1、2、4，以及不同重叠窗口响应汇总方式，同时报告定位指标与运行时间。由于论文未公开这些参数，该实验可量化复现假设对结论的影响。
   \item \textbf{多随机种子：}至少运行种子 7、42、2026，优先重复 TS-GAN Grid 与 AITEX 域内实验，报告均值和标准差；若算力允许，再扩展到其余三种模型，以判断当前结果是否依赖偶然初始化和数据划分。
   \item \textbf{AITEX 无监督对照：}将现有使用 9 张异常训练图的结果作为弱监督基线，再增加只使用 84 张正常训练图的目标域适配，区分正常纹理域适配与少量异常监督各自带来的贡献。
+  \item \textbf{训练规模配平：}从 Grid 的 264 张正常训练图中固定抽取 84 张，与 AITEX 的 84 张正常训练图使用相同随机种子、训练轮数和输入分辨率重训，先量化训练样本减少本身造成的下降。随后可引入 MVTec AD 2 的 Fabric 场景；该场景官方提供 387 张正常训练图，可固定抽取 264 张与 Grid 配平。KolektorSDD 共有 347 张无缺陷图和 52 张缺陷图，也可作为规模接近的真实工业表面补充实验，但其材料和长宽比与织物不同，不能仅凭样本数接近就视为同分布公平比较。
   \item \textbf{定位结构改进：}针对正常高响应和细小缺陷漏定位，尝试更高输入分辨率、多尺度窗口和边界抑制；所有方案均应在正常验证集上确定参数，不能根据异常测试标签反复选择最佳方案。
   \item \textbf{统一公平比较：}在固定测试集、预处理和评价脚本的前提下比较模型，并明确区分 Grid 主实验、AITEX 零样本实验和 AITEX 域内实验，避免把不同数据协议下的指标直接排名。
   \item \textbf{工程归档：}将最终代码合并到主分支，保留配置、固定划分清单、指标文件和代表图；大型检查点单独归档而不提交 Git，并清理临时压缩包和重复运行目录。
@@ -1055,6 +1147,8 @@ AITEX 已经参与重新训练，但图片级最大聚合 AUROC 为 0.8173，仍
   \item Akcay S, Atapour-Abarghouei A, Breckon T P. GANomaly: Semi-supervised anomaly detection via adversarial training[C]//Asian Conference on Computer Vision. Cham: Springer, 2018: 622--637.
   \item Bergmann P, Fauser M, Sattlegger D, et al. MVTec AD: A comprehensive real-world dataset for unsupervised anomaly detection[C]//Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. 2019: 9592--9600.
   \item Silvestre-Blanes J, Albero-Albero T, Miralles I, et al. AFID: A public fabric image database for defect detection[J]. AUTEX Research Journal, 2019. 数据集官网：\url{https://www.aitex.es/afid/}.
+  \item Heckler-Kram L, Neudeck J H, Scheler U, et al. The MVTec AD 2 Dataset: Advanced Scenarios for Unsupervised Anomaly Detection[J]. International Journal of Computer Vision, 2026. \href{https://www.mvtec.com/research-teaching/datasets/mvtec-ad-2}{MVTec AD 2 数据集页面}.
+  \item Tabernik D, \v{S}ela S, Skvar\v{c} J, et al. Segmentation-Based Deep-Learning Approach for Surface-Defect Detection[J]. Journal of Intelligent Manufacturing, 2020. \href{https://www.vicos.si/resources/kolektorsdd/}{KolektorSDD 数据集页面}.
 \end{enumerate}
 
 \appendix
